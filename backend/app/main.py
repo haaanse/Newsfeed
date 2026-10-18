@@ -10,7 +10,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from . import api, db, fetcher
+from . import api, db, enrich, fetcher
 from .config import ROOT, load_config
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -32,10 +32,18 @@ SECURITY_HEADERS = {
 }
 
 
+def cycle() -> None:
+    """Ein Durchlauf: Feeds abrufen, dann per Ollama anreichern."""
+    try:
+        fetcher.run_fetch()
+    finally:
+        enrich.run()
+
+
 def _start_scheduler() -> BackgroundScheduler:
     cfg = load_config()
     sched = BackgroundScheduler(timezone="UTC")
-    sched.add_job(fetcher.run_fetch, "interval", minutes=cfg["fetch"]["interval_minutes"],
+    sched.add_job(cycle, "interval", minutes=cfg["fetch"]["interval_minutes"],
                   id="fetch", next_run_time=datetime.now(timezone.utc),
                   max_instances=1, coalesce=True)
     sched.add_job(fetcher.cleanup, "cron", hour=3, minute=30, id="cleanup")

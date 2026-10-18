@@ -45,6 +45,40 @@ CREATE TABLE IF NOT EXISTS article_topics (
     PRIMARY KEY (article_id, topic)
 );
 CREATE INDEX IF NOT EXISTS idx_article_topics_topic ON article_topics(topic, article_id);
+
+CREATE TABLE IF NOT EXISTS clusters (
+    id          INTEGER PRIMARY KEY,
+    first_seen  INTEGER NOT NULL,
+    last_seen   INTEGER NOT NULL,
+    size        INTEGER NOT NULL DEFAULT 1,
+    centroid    BLOB NOT NULL,
+    summary     TEXT,
+    summary_size INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_clusters_last_seen ON clusters(last_seen);
+
+-- Nur das Bundesland und der Zeitpunkt – keine Geräte- oder Nutzerdaten.
+CREATE TABLE IF NOT EXISTS region_requests (
+    region         TEXT PRIMARY KEY,
+    last_requested INTEGER NOT NULL
+);
+"""
+
+# Spalten, die nach dem MVP dazugekommen sind (bestehende Datenbanken werden ergänzt)
+MIGRATIONS = {
+    "articles": {
+        "embedding": "BLOB",
+        "cluster_id": "INTEGER REFERENCES clusters(id) ON DELETE SET NULL",
+        "region": "TEXT",
+        "classified": "INTEGER NOT NULL DEFAULT 0",
+    },
+    "sources": {
+        "region": "TEXT",
+    },
+}
+POST_MIGRATION = """
+CREATE INDEX IF NOT EXISTS idx_articles_cluster ON articles(cluster_id);
+CREATE INDEX IF NOT EXISTS idx_articles_pending ON articles(embedding) WHERE embedding IS NULL;
 """
 
 
@@ -70,3 +104,9 @@ def init_db(path: Path | None = None) -> None:
     with connect(path) as conn:
         conn.execute("PRAGMA journal_mode = WAL")
         conn.executescript(SCHEMA)
+        for table, columns in MIGRATIONS.items():
+            existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+            for name, decl in columns.items():
+                if name not in existing:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
+        conn.executescript(POST_MIGRATION)

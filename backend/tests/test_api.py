@@ -14,22 +14,23 @@ def client(cfg, db_file, feeds):
 
 def test_topics(client):
     topics = client.get("/api/topics").json()
-    assert [t["id"] for t in topics] == ["top", "politik", "tech"]
+    assert [t["id"] for t in topics] == ["top", "politik", "tech", "ki", "sport", "regional"]
 
 
-def test_articles_chronological_without_paywall(client):
-    data = client.get("/api/articles?topics=politik").json()
+def test_feed_latest_without_paywall(client):
+    data = client.get("/api/feed?topics=politik&sort=latest").json()
     titles = [a["title"] for a in data["items"]]
     assert titles == ["Bundestag beschließt Haushalt 2027",
                       "Wahlrechtsreform: Was sich jetzt ändert",
                       "Nur ein Bild per http"]
-    times = [a["published_at"] for a in data["items"]]
-    assert times == sorted(times, reverse=True)
-    assert data["next"] is None
+    assert data["next_offset"] is None
+    first = data["items"][0]
+    assert first["source_count"] == 1 and first["sources"] == []
+    assert first["image_url"] == "https://img.example.org/haushalt.jpg"
 
 
-def test_articles_multiple_topics_no_duplicates(client):
-    items = client.get("/api/articles?topics=politik,tech").json()["items"]
+def test_feed_multiple_topics_no_duplicates(client):
+    items = client.get("/api/feed?topics=politik,tech&sort=latest").json()["items"]
     urls = [a["url"] for a in items]
     assert len(urls) == len(set(urls)) == 5
     haushalt = next(a for a in items if a["title"].startswith("Bundestag"))
@@ -37,15 +38,15 @@ def test_articles_multiple_topics_no_duplicates(client):
 
 
 def test_pagination(client):
-    first = client.get("/api/articles?topics=politik,tech&limit=2").json()
-    assert len(first["items"]) == 2 and first["next"]
-    second = client.get(f"/api/articles?topics=politik,tech&limit=2&before={first['next']}").json()
+    first = client.get("/api/feed?topics=politik,tech&sort=latest&limit=2").json()
+    assert len(first["items"]) == 2 and first["next_offset"] == 2
+    second = client.get("/api/feed?topics=politik,tech&sort=latest&limit=2&offset=2").json()
     assert {a["id"] for a in first["items"]}.isdisjoint(a["id"] for a in second["items"])
 
 
-def test_invalid_topic_and_cursor(client):
-    assert client.get("/api/articles?topics=gibtsnicht").status_code == 400
-    assert client.get("/api/articles?topics=tech&before=abc").status_code == 400
+def test_invalid_parameters(client):
+    assert client.get("/api/feed?topics=gibtsnicht").status_code == 400
+    assert client.get("/api/feed?topics=tech&offset=-1").status_code == 422
 
 
 def test_sources_status(client):

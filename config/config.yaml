@@ -32,6 +32,78 @@ paywall:
     - '^(SPIEGEL\+|Z\+|F\+|SZ ?Plus|heise ?\+|t3n Pro|Bezahlinhalt|paid|premium|plus)$'
 
 # ---------------------------------------------------------------------
+#  Ollama (läuft nativ unter Windows; aus dem Container erreichbar über
+#  host.docker.internal). Die Umgebungsvariable OLLAMA_URL hat Vorrang.
+#  Ohne Ollama läuft die App weiter: keine Story-Gruppierung, Ranking
+#  dann nur nach Aktualität und Quellengewicht.
+# ---------------------------------------------------------------------
+ollama:
+  url: "http://localhost:11434"
+  embed_model: "nomic-embed-text"
+  llm_model: "llama3.1"
+  timeout_seconds: 180
+  batch_size: 32
+  # Gleiche Story = Kosinus-Ähnlichkeit >= Schwelle innerhalb des Zeitfensters
+  cluster_threshold: 0.80
+  cluster_window_hours: 48
+  # Themen für Artikel aus allgemeinen Feeds (z. B. "top") per Embedding-
+  # Nachbarschaft zu Artikeln aus Themen-Feeds bestimmen (schnell, CPU-tauglich)
+  classify:
+    from_topics: [top]          # Artikel aus diesen Themen werden klassifiziert
+    neighbors: 9
+    min_similarity: 0.62
+    min_share: 0.4              # Anteil der Nachbarn, die ein Thema haben müssen
+    llm_fallback: false         # unsichere Fälle zusätzlich per LLM (langsam auf CPU)
+    llm_max_per_run: 10
+  # Neutraler Ein-Satz-Überblick pro Story (auf CPU langsam -> standardmäßig aus)
+  summaries:
+    enabled: false
+    min_sources: 3              # nur Storys mit mind. so vielen Verlagen
+    max_per_run: 3
+
+# ---------------------------------------------------------------------
+#  Ranking – Formel frei anpassbar. Verfügbare Variablen:
+#   sources       Anzahl unterschiedlicher Verlage in der Story
+#   articles      Anzahl Artikel in der Story
+#   age_hours     Stunden seit dem ersten Artikel der Story
+#   update_hours  Stunden seit dem neuesten Artikel der Story
+#   weight        mittleres Quellengewicht der beteiligten Verlage
+#   max_weight    höchstes Quellengewicht
+#   local         1, wenn die Story deinen Landkreis betrifft, sonst 0
+#  Funktionen: log, log2, exp, sqrt, min, max, abs
+# ---------------------------------------------------------------------
+ranking:
+  formula: "1.2 * log2(1 + sources) + 2.0 * 0.5 ** (age_hours / half_life) + 0.6 * weight + 1.0 * local"
+  constants:
+    half_life: 8                # nach so vielen Stunden zählt die Aktualität nur noch halb
+  window_hours: 48              # für "Top" werden nur Storys dieses Zeitraums gerankt
+
+# ---------------------------------------------------------------------
+#  Themenregeln: Artikel, auf die ein Muster passt (Titel oder Anriss),
+#  bekommen zusätzlich dieses Thema – egal aus welchem Feed sie stammen.
+# ---------------------------------------------------------------------
+topic_rules:
+  ki:
+    - '\bKI\b'
+    - '\bK\.I\.'
+    - 'künstliche[rnsm]? Intelligenz'
+    - '\b(ChatGPT|OpenAI|Anthropic|DeepSeek|Midjourney|Mistral AI|Google Gemini|Microsoft Copilot)\b'
+    - '\b(Sprachmodell|Chatbot|LLM|generative[rnsm]? KI|maschinelle[sn]? Lernen|neuronale[sn]? Netz)'
+
+# ---------------------------------------------------------------------
+#  Regional: Feeds pro Bundesland werden nur abgerufen, wenn in den letzten
+#  keep_days Tagen jemand dieses Land gewählt hat. Gespeichert wird nur das
+#  Land, nie wer es gewählt hat. Standard-Feed je Land: tagesschau-Regional-
+#  seite (Inhalte von BR, SWR, WDR, NDR, MDR, hr, rbb, SR, RB).
+#  Zusätzliche Feeds pro Land (Kürzel siehe /api/regions) hier eintragen.
+# ---------------------------------------------------------------------
+regional:
+  keep_days: 14
+  extra_sources: {}
+  #  BY:
+  #    - { id: br24, publisher: BR24, url: "https://…/feed.xml", weight: 1.2 }
+
+# ---------------------------------------------------------------------
 #  Themen – Reihenfolge = Reihenfolge der Tabs
 # ---------------------------------------------------------------------
 topics:
@@ -44,6 +116,7 @@ topics:
   - { id: sport,        name: "Sport" }
   - { id: wissenschaft, name: "Wissenschaft" }
   - { id: kultur,       name: "Kultur" }
+  - { id: regional,     name: "Regional" }   # Feeds kommen aus "regional" (s. o.)
 
 # ---------------------------------------------------------------------
 #  Quellen
@@ -85,7 +158,7 @@ sources:
   - { id: spiegel-netzwelt,    publisher: SPIEGEL,          topic: tech,         weight: 1.0, url: "https://www.spiegel.de/netzwelt/index.rss" }
   - { id: zeit-digital,        publisher: ZEIT,             topic: tech,         weight: 1.0, url: "https://newsfeed.zeit.de/digital/index" }
 
-  # --- KI (wird in Schritt 2 zusätzlich per Ollama aus Tech-Feeds befüllt)
+  # --- KI (zusätzlich über topic_rules aus allen anderen Feeds befüllt)
   - { id: the-decoder,         publisher: THE DECODER,      topic: ki,           weight: 1.2, url: "https://the-decoder.de/feed/" }
 
   # --- Gaming ----------------------------------------------------------

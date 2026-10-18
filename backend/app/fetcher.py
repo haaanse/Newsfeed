@@ -20,7 +20,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 import feedparser
 import httpx
 
-from . import db
+from . import db, regions
 from .config import load_config
 
 log = logging.getLogger(__name__)
@@ -210,54 +210,73 @@ def fetch_source(client: httpx.Client, source: dict, etag: str | None, last_modi
         return FetchResult(source["id"], "error", error=f"{type(e).__name__}: {e}"[:300])
 
 
-def sync_sources(conn, cfg: dict) -> None:
-    """Quellen aus der YAML-Datei in die Datenbank übernehmen."""
-    ids = [s["id"] for s in cfg["sources"]]
-    for s in cfg["sources"]:
+def all_sources(conn, cfg: dict) -> list[dict]:
+    """Quellen aus der YAML-Datei plus Regionalquellen aller aktuell gewählten Länder."""
+    result = list(cfg["sources"])
+    for land in regions.active(conn, cfg):
+        result += regions.sources_for(cfg, land)
+    return result
+
+
+def sync_sources(conn, sources: list[dict], prune: bool = True) -> None:
+    """Quellen in die Datenbank übernehmen; prune entfernt nicht mehr vorhandene."""
+    for s in sources:
         conn.execute(
-            """INSERT INTO sources (id, name, publisher, url, topic, weight)
-               VALUES (:id, :name, :publisher, :url, :topic, :weight)
+            """INSERT INTO sources (id, name, publisher, url, topic, weight, region)
+               VALUES (:id, :name, :publisher, :url, :topic, :weight, :region)
                ON CONFLICT(id) DO UPDATE SET
                  name=excluded.name, publisher=excluded.publisher, topic=excluded.topic,
-                 weight=excluded.weight,
+                 weight=excluded.weight, region=excluded.region,
                  etag=CASE WHEN sources.url = excluded.url THEN sources.etag END,
                  last_modified=CASE WHEN sources.url = excluded.url THEN sources.last_modified END,
                  url=excluded.url""",
-            {"topic": None, **s},
+            {"topic": None, "region": None, **s},
         )
-    conn.execute(f"DELETE FROM sources WHERE id NOT IN ({','.join('?' * len(ids))})", ids)
+    if prune:
+        ids = [s["id"] for s in sources]
+        conn.execute(f"DELETE FROM sources WHERE id NOT IN ({','.join('?' * len(ids))})", ids)
 
 
-def store_items(conn, source: dict, items: list[Item], now: int) -> int:
+def rule_topics(cfg: dict, title: str, summary: str) -> set[str]:
+    text = f"{title} {summary}"
+    return {topic for topic, patterns in cfg["_topic_rules"].items() if any(p.search(text) for p in patterns)}
+
+
+def store_items(conn, source: dict, items: list[Item], now: int, cfg: dict) -> int:
     new = 0
     for it in items:
         cur = conn.execute(
             """INSERT INTO articles (url, title, summary, image_url, source_id, publisher,
-                                     published_at, fetched_at, paywall)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                     published_at, fetched_at, paywall, region)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(url) DO NOTHING""",
             (it.url, it.title, it.summary, it.image_url, source["id"], source["publisher"],
-             it.published_at, now, int(it.paywall)),
+             it.published_at, now, int(it.paywall), source.get("region")),
         )
         if cur.rowcount:
             new += 1
             article_id = cur.lastrowid
         else:
             article_id = conn.execute("SELECT id FROM articles WHERE url = ?", (it.url,)).fetchone()[0]
+        # Regionalmeldungen bleiben im Regional-Tab; sonst greifen die Themenregeln
+        topics = set() if source.get("region") or not cur.rowcount else rule_topics(cfg, it.title, it.summary)
         if source.get("topic"):
+            topics.add(source["topic"])
+        for topic in topics:
             conn.execute("INSERT OR IGNORE INTO article_topics (article_id, topic) VALUES (?, ?)",
-                         (article_id, source["topic"]))
+                         (article_id, topic))
     return new
 
 
 def run_fetch(cfg: dict | None = None, db_file: Path | None = None,
-              client: httpx.Client | None = None) -> dict:
-    """Ein kompletter Abruf aller aktiven Quellen. Gibt eine Zusammenfassung zurück."""
+              client: httpx.Client | None = None, only: list[dict] | None = None) -> dict:
+    """Abruf aller aktiven Quellen (oder nur der in `only` genannten)."""
     cfg = cfg or load_config()
     started = time.time()
-    sources = [s for s in cfg["sources"] if s["enabled"]]
     with db.connect(db_file) as conn:
-        sync_sources(conn, cfg)
+        sources = only if only is not None else all_sources(conn, cfg)
+        sync_sources(conn, sources, prune=only is None)
+        sources = [s for s in sources if s["enabled"]]
         state = {r["id"]: (r["etag"], r["last_modified"])
                  for r in conn.execute("SELECT id, etag, last_modified FROM sources")}
 
@@ -290,7 +309,7 @@ def run_fetch(cfg: dict | None = None, db_file: Path | None = None,
                                 WHERE id=?""", (now, res.error, res.source_id))
                 log.warning("Feed %s: %s", res.source_id, res.error)
                 continue
-            new = store_items(conn, source, items, now) if res.status == "ok" else 0
+            new = store_items(conn, source, items, now, cfg) if res.status == "ok" else 0
             summary[res.status] += 1
             summary["new_articles"] += new
             conn.execute("""UPDATE sources SET last_fetch=?, last_ok=?, error_count=0, last_error=NULL,
@@ -307,11 +326,15 @@ def cleanup(cfg: dict | None = None, db_file: Path | None = None, now: int | Non
     cutoff = (now or int(time.time())) - int(cfg["retention_days"]) * 86400
     with db.connect(db_file) as conn:
         deleted = conn.execute("DELETE FROM articles WHERE published_at < ?", (cutoff,)).rowcount
+        conn.execute("DELETE FROM clusters WHERE id NOT IN (SELECT DISTINCT cluster_id FROM articles "
+                     "WHERE cluster_id IS NOT NULL)")
     log.info("Aufräumen: %d alte Artikel gelöscht", deleted)
     return deleted
 
 
-if __name__ == "__main__":  # manueller Abruf: python -m app.fetcher
+if __name__ == "__main__":  # manueller Abruf inkl. Anreicherung: python -m app.fetcher
+    from . import enrich
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     db.init_db()
     print(run_fetch())
+    print(enrich.run())

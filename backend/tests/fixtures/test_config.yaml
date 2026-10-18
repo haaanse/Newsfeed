@@ -12,10 +12,34 @@ paywall:
     - '[?&]reduced=true'
   category_patterns:
     - '^(heise ?\+|paid)$'
+ollama:
+  url: "http://ollama.test"
+  cluster_threshold: 0.6
+  cluster_window_hours: 48
+  classify:
+    from_topics: [top]
+    neighbors: 5
+    min_similarity: 0.3
+    min_share: 0.5
+  summaries:
+    enabled: true
+    min_sources: 2
+    max_per_run: 5
+ranking:
+  formula: "1.2 * log2(1 + sources) + 2.0 * 0.5 ** (age_hours / half_life) + 0.6 * weight + local"
+  constants: { half_life: 8 }
+  window_hours: 48
+topic_rules:
+  ki: ['\bKI\b', 'künstliche[rnsm]? Intelligenz']
+regional:
+  keep_days: 14
 topics:
   - { id: top, name: "Top" }
   - { id: politik, name: "Politik" }
   - { id: tech, name: "Tech" }
+  - { id: ki, name: "KI" }
+  - { id: sport, name: "Sport" }
+  - { id: regional, name: "Regional" }
 sources:
   - { id: politik-feed, publisher: Beispiel, topic: politik, weight: 1.2, url: "https://feeds.test/politik.xml" }
   - { id: tech-feed, publisher: Technik, topic: tech, weight: 1.0, url: "https://feeds.test/tech.xml" }

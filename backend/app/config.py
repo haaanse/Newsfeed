@@ -69,6 +69,56 @@ def validate(data: dict) -> dict:
             paywall[f"_{key}"] = [re.compile(p, re.I) for p in paywall.get(key) or []]
         except re.error as e:
             raise ConfigError(f"paywall.{key}: ungültiger regulärer Ausdruck: {e}") from e
+
+    rules = data.get("topic_rules") or {}
+    compiled = {}
+    for topic, patterns in rules.items():
+        if topic not in topic_ids:
+            raise ConfigError(f"topic_rules: unbekanntes Thema '{topic}'")
+        try:
+            compiled[topic] = [re.compile(p) for p in patterns or []]
+        except re.error as e:
+            raise ConfigError(f"topic_rules.{topic}: ungültiger regulärer Ausdruck: {e}") from e
+    data["_topic_rules"] = compiled
+
+    ollama = data.setdefault("ollama", {})
+    ollama["url"] = os.environ.get("OLLAMA_URL") or ollama.get("url") or "http://localhost:11434"
+    ollama.setdefault("embed_model", "nomic-embed-text")
+    ollama.setdefault("llm_model", "llama3.1")
+    ollama.setdefault("timeout_seconds", 180)
+    ollama.setdefault("batch_size", 32)
+    ollama.setdefault("cluster_threshold", 0.80)
+    ollama.setdefault("cluster_window_hours", 48)
+    classify = ollama.setdefault("classify", {})
+    classify.setdefault("from_topics", ["top"])
+    classify.setdefault("neighbors", 9)
+    classify.setdefault("min_similarity", 0.62)
+    classify.setdefault("min_share", 0.4)
+    classify.setdefault("llm_fallback", False)
+    classify.setdefault("llm_max_per_run", 10)
+    summaries = ollama.setdefault("summaries", {})
+    summaries.setdefault("enabled", False)
+    summaries.setdefault("min_sources", 3)
+    summaries.setdefault("max_per_run", 3)
+
+    from .ranking import Formula, FormulaError  # noqa: PLC0415 – vermeidet Importzyklus
+    ranking = data.setdefault("ranking", {})
+    ranking.setdefault("formula", "1.2 * log2(1 + sources) + 2.0 * 0.5 ** (age_hours / 8) + 0.6 * weight")
+    ranking.setdefault("window_hours", 48)
+    try:
+        ranking["_formula"] = Formula(ranking["formula"], ranking.get("constants"))
+    except FormulaError as e:
+        raise ConfigError(str(e)) from e
+
+    regional = data.setdefault("regional", {})
+    regional.setdefault("keep_days", 14)
+    extra = regional.get("extra_sources") or {}
+    for land, items in extra.items():
+        for s in items or []:
+            for key in ("id", "url", "publisher"):
+                if not s.get(key):
+                    raise ConfigError(f"regional.extra_sources.{land}: Feld '{key}' fehlt")
+    regional["extra_sources"] = extra
     return data
 
 
