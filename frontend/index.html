@@ -18,25 +18,30 @@
   <a class="skip-link" href="#feed">Zum Feed springen</a>
 
   <header class="topbar">
-    <h1 class="brand"><img src="/icons/icon.svg" alt="" width="24" height="24"> Newsfeed</h1>
+    <h1 class="brand"><img src="/icons/icon.svg" alt="" width="24" height="24"> <span>Newsfeed</span></h1>
+    <div class="sort" role="group" aria-label="Sortierung">
+      <button type="button" class="sort-btn" data-sort="top" title="Nach Relevanz (S)">Top</button>
+      <button type="button" class="sort-btn" data-sort="latest" title="Neueste zuerst (S)">Neueste</button>
+    </div>
     <div class="topbar-actions">
       <button id="refresh" class="icon-btn" type="button" title="Neu laden (R)" aria-label="Neu laden">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
       </button>
-      <button id="open-settings" class="icon-btn" type="button" title="Einstellungen" aria-label="Einstellungen">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      <button id="open-settings" class="icon-btn" type="button" title="Einstellungen (,)" aria-label="Einstellungen">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
       </button>
     </div>
   </header>
 
   <div class="layout">
     <nav class="topics" aria-label="Themen">
-      <div id="tabs" role="tablist" aria-orientation="horizontal"></div>
+      <div id="tabs" role="tablist"></div>
+      <p class="sidebar-hint">Tasten: <kbd>1</kbd>–<kbd>9</kbd> Thema · <kbd>j</kbd>/<kbd>k</kbd> Artikel · <kbd>s</kbd> Sortierung</p>
     </nav>
 
-    <main id="feed" tabindex="-1" aria-live="polite">
-      <div id="status" class="status" hidden></div>
-      <ol id="articles" class="articles"></ol>
+    <main id="feed" tabindex="-1">
+      <div id="status" class="status" role="status" hidden></div>
+      <div id="articles" class="articles" aria-live="polite" aria-busy="false"></div>
       <div id="sentinel" class="sentinel">
         <button id="more" type="button" class="more" hidden>Mehr laden</button>
       </div>
@@ -44,31 +49,84 @@
   </div>
 
   <dialog id="settings" aria-labelledby="settings-title">
-    <form method="dialog">
-      <h2 id="settings-title">Einstellungen</h2>
-      <label class="switch">
-        <input type="checkbox" id="opt-images">
-        <span>Vorschaubilder anzeigen</span>
-      </label>
-      <p class="hint">Bilder werden direkt vom Server des Verlags geladen. Dabei sieht der Verlag
-        die IP-Adresse deines Geräts. Ist die Option aus, werden nur Themen-Symbole gezeigt.</p>
-      <p class="hint">Alle Einstellungen bleiben nur auf diesem Gerät gespeichert. Es gibt keine Konten
-        und kein Tracking.</p>
+    <form method="dialog" class="settings-form">
+      <header class="settings-head">
+        <h2 id="settings-title">Einstellungen</h2>
+        <button value="close" class="icon-btn" aria-label="Schließen" title="Schließen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+
+      <section>
+        <h3>Themen</h3>
+        <p class="hint">„Anzeigen“ blendet ein Thema als Tab ein oder aus. „Mein Feed“ führt die
+          gewählten Themen zu einem gemeinsamen Feed zusammen.</p>
+        <table class="topic-table">
+          <thead><tr><th scope="col">Thema</th><th scope="col">Anzeigen</th><th scope="col">Mein Feed</th></tr></thead>
+          <tbody id="topic-rows"></tbody>
+        </table>
+      </section>
+
+      <section>
+        <h3>Region</h3>
+        <div class="field">
+          <label for="opt-land">Bundesland</label>
+          <select id="opt-land"><option value="">– keine Region –</option></select>
+        </div>
+        <div class="field">
+          <label for="opt-kreis">Landkreis / Stadt</label>
+          <select id="opt-kreis" disabled><option value="">– ganzes Bundesland –</option></select>
+        </div>
+        <label class="switch"><input type="checkbox" id="opt-only-local"><span>Nur Meldungen aus meinem Landkreis</span></label>
+        <p class="hint">Deine Region bleibt auf diesem Gerät. Der Server erfährt beim Laden nur das
+          Bundesland, um dessen Meldungen abzurufen.</p>
+        <p class="hint small" id="region-attribution"></p>
+      </section>
+
+      <section>
+        <h3>Begriffe ausblenden</h3>
+        <div class="field">
+          <label for="opt-blocked">Meldungen mit diesen Begriffen ausblenden (kommagetrennt)</label>
+          <textarea id="opt-blocked" rows="2" placeholder="z. B. Promi, Horoskop, Dschungelcamp"></textarea>
+        </div>
+        <p class="hint">Der Filter läuft nur auf deinem Gerät.</p>
+      </section>
+
+      <section>
+        <h3>Darstellung</h3>
+        <label class="switch"><input type="checkbox" id="opt-images"><span>Vorschaubilder anzeigen</span></label>
+        <p class="hint">Bilder kommen direkt vom Server des Verlags. Dabei sieht der Verlag die IP-Adresse
+          deines Geräts. Ist die Option aus, siehst du nur Themen-Symbole.</p>
+        <label class="switch"><input type="checkbox" id="opt-overview"><span>KI-Überblick zu Storys anzeigen (falls vorhanden)</span></label>
+        <label class="switch"><input type="checkbox" id="opt-compact"><span>Kompakte Ansicht</span></label>
+      </section>
+
+      <section>
+        <h3>Datenschutz</h3>
+        <p class="hint">Es gibt keine Konten, keine Cookies und kein Tracking. Alle Einstellungen liegen nur im
+          Speicher dieses Browsers.</p>
+        <button type="button" id="reset-settings" class="secondary">Alle Einstellungen zurücksetzen</button>
+      </section>
+
       <div class="dialog-actions"><button value="close" class="primary">Fertig</button></div>
     </form>
   </dialog>
 
-  <template id="article-tpl">
-    <li class="card">
-      <a class="card-link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer">
-        <div class="thumb"></div>
-        <div class="card-body">
-          <h3 class="title"></h3>
-          <p class="summary"></p>
-          <p class="meta"><span class="publisher"></span> · <time></time></p>
-        </div>
-      </a>
-    </li>
+  <template id="story-tpl">
+    <article class="story">
+      <div class="thumb"></div>
+      <div class="story-body">
+        <div class="kicker"></div>
+        <h3 class="title"><a class="story-link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer"></a></h3>
+        <p class="overview" hidden></p>
+        <p class="summary"></p>
+        <p class="meta"><span class="publisher"></span> · <time></time></p>
+        <details class="more-sources" hidden>
+          <summary></summary>
+          <ul></ul>
+        </details>
+      </div>
+    </article>
   </template>
 </body>
 </html>

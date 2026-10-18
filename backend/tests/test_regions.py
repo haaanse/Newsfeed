@@ -1,7 +1,6 @@
-import pytest
 from fastapi.testclient import TestClient
 
-from app import api, db, regions, stories
+from app import api, db, regions
 from app.fetcher import all_sources
 from app.main import app
 

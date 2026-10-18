@@ -1,6 +1,6 @@
 // Service Worker: App-Shell offline verfügbar, letzte Feed-Antworten (nur Text) als Offline-Fallback.
 // Bilder fremder Server werden nicht angefasst und nicht gecacht.
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL_CACHE = `shell-${VERSION}`;
 const API_CACHE = `api-${VERSION}`;
 const SHELL = [
@@ -27,17 +27,17 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== self.location.origin) return;
 
-  if (url.pathname === "/api/topics" || url.pathname === "/api/articles") {
+  if (["/api/topics", "/api/feed", "/api/regions"].includes(url.pathname)) {
     event.respondWith(networkFirstApi(req, url));
   } else if (!url.pathname.startsWith("/api/")) {
-    event.respondWith(staleWhileRevalidate(event, req));
+    event.respondWith(networkFirstShell(req));
   }
 });
 
 async function networkFirstApi(req, url) {
   const cache = await caches.open(API_CACHE);
   // Nur erste Seiten cachen (ohne Cursor), damit der Cache klein bleibt.
-  const cacheable = !url.searchParams.has("before");
+  const cacheable = !Number(url.searchParams.get("offset"));
   try {
     const res = await fetch(req);
     if (res.ok && cacheable) await cache.put(req, res.clone());
@@ -51,21 +51,17 @@ async function networkFirstApi(req, url) {
   }
 }
 
-async function staleWhileRevalidate(event, req) {
+// Network-first: nach einem Update kommt sofort die neue App; offline greift der Cache.
+async function networkFirstShell(req) {
   const cache = await caches.open(SHELL_CACHE);
-  const cached = await cache.match(req, { ignoreSearch: true });
-  const network = fetch(req).then((res) => {
+  try {
+    const res = await fetch(req);
     if (res.ok) cache.put(req, res.clone());
     return res;
-  });
-  if (cached) {
-    event.waitUntil(network.catch(() => {}));
-    return cached;
-  }
-  try {
-    return await network;
   } catch (err) {
-    if (req.mode === "navigate") return cache.match("/index.html");
+    const cached = await cache.match(req, { ignoreSearch: true })
+      || (req.mode === "navigate" && await cache.match("/index.html"));
+    if (cached) return cached;
     throw err;
   }
 }
