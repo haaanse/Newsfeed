@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f1115">
+  <meta name="color-scheme" content="dark">
+  <meta name="referrer" content="no-referrer">
+  <meta name="description" content="Privater News-Feed ohne Tracking">
+  <title>Newsfeed</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#feed">Zum Feed springen</a>
+
+  <header class="topbar">
+    <h1 class="brand"><img src="/icons/icon.svg" alt="" width="24" height="24"> Newsfeed</h1>
+    <div class="topbar-actions">
+      <button id="refresh" class="icon-btn" type="button" title="Neu laden (R)" aria-label="Neu laden">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
+      </button>
+      <button id="open-settings" class="icon-btn" type="button" title="Einstellungen" aria-label="Einstellungen">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="topics" aria-label="Themen">
+      <div id="tabs" role="tablist" aria-orientation="horizontal"></div>
+    </nav>
+
+    <main id="feed" tabindex="-1" aria-live="polite">
+      <div id="status" class="status" hidden></div>
+      <ol id="articles" class="articles"></ol>
+      <div id="sentinel" class="sentinel">
+        <button id="more" type="button" class="more" hidden>Mehr laden</button>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="settings" aria-labelledby="settings-title">
+    <form method="dialog">
+      <h2 id="settings-title">Einstellungen</h2>
+      <label class="switch">
+        <input type="checkbox" id="opt-images">
+        <span>Vorschaubilder anzeigen</span>
+      </label>
+      <p class="hint">Bilder werden direkt vom Server des Verlags geladen. Dabei sieht der Verlag
+        die IP-Adresse deines Geräts. Ist die Option aus, werden nur Themen-Symbole gezeigt.</p>
+      <p class="hint">Alle Einstellungen bleiben nur auf diesem Gerät gespeichert. Es gibt keine Konten
+        und kein Tracking.</p>
+      <div class="dialog-actions"><button value="close" class="primary">Fertig</button></div>
+    </form>
+  </dialog>
+
+  <template id="article-tpl">
+    <li class="card">
+      <a class="card-link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer">
+        <div class="thumb"></div>
+        <div class="card-body">
+          <h3 class="title"></h3>
+          <p class="summary"></p>
+          <p class="meta"><span class="publisher"></span> · <time></time></p>
+        </div>
+      </a>
+    </li>
+  </template>
+</body>
+</html>

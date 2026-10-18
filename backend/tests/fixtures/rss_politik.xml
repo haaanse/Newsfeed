@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Beispiel Politik</title>
+    <link>https://example.org/politik</link>
+    <description>Testfeed</description>
+    <item>
+      <title>Bundestag beschließt &lt;b&gt;Haushalt&lt;/b&gt; 2027</title>
+      <link>https://example.org/politik/haushalt-2027-100.html?utm_source=rss&amp;utm_medium=feed&amp;id=7#top</link>
+      <description><![CDATA[<p><img src="https://img.example.org/haushalt.jpg" alt=""/>Nach langer Debatte hat der Bundestag den Haushalt für 2027 beschlossen. Die Opposition kritisiert die Neuverschuldung &amp; fordert Nachbesserungen.</p>]]></description>
+      <pubDate>Sun, 18 Oct 2026 08:00:00 +0200</pubDate>
+    </item>
+    <item>
+      <title>Wahlrechtsreform: Was sich jetzt ändert</title>
+      <link>https://example.org/politik/wahlrecht-102.html</link>
+      <description>Die Reform tritt zum Jahreswechsel in Kraft. Ein Überblick über die wichtigsten Punkte.</description>
+      <media:thumbnail url="https://img.example.org/wahlrecht.jpg" width="640" height="360"/>
+      <pubDate>Sun, 18 Oct 2026 06:30:00 +0200</pubDate>
+    </item>
+    <item>
+      <title>Kommentar zur Koalition</title>
+      <link>https://example.org/politik/kommentar-koalition.html?reduced=true</link>
+      <description>Ein Kommentar hinter der Bezahlschranke.</description>
+      <pubDate>Sun, 18 Oct 2026 05:00:00 +0200</pubDate>
+    </item>
+    <item>
+      <title>SPIEGEL+ Die geheimen Pläne der Regierung</title>
+      <link>https://example.org/politik/geheim.html</link>
+      <description>Exklusiv.</description>
+      <pubDate>Sun, 18 Oct 2026 04:00:00 +0200</pubDate>
+    </item>
+    <item>
+      <title>Eintrag ohne Link</title>
+      <description>Sollte ignoriert werden.</description>
+    </item>
+    <item>
+      <title>Nur ein Bild per http</title>
+      <link>https://example.org/politik/http-bild.html</link>
+      <enclosure url="http://insecure.example.org/bild.jpg" type="image/jpeg" length="1000"/>
+      <description>Unsichere Bild-URL wird nicht übernommen.</description>
+      <pubDate>Sun, 18 Oct 2026 03:00:00 +0200</pubDate>
+    </item>
+  </channel>
+</rss>

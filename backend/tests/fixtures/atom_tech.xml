@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Beispiel Tech</title>
+  <id>https://example.net/</id>
+  <updated>2026-10-18T09:00:00Z</updated>
+  <entry>
+    <title>Neuer Prozessor mit 128 Kernen vorgestellt</title>
+    <link rel="alternate" href="https://example.net/news/prozessor-128.html"/>
+    <link rel="enclosure" type="image/jpeg" href="https://img.example.net/cpu.jpg"/>
+    <id>urn:1</id>
+    <published>2026-10-18T09:00:00Z</published>
+    <summary type="html">Der Hersteller verspricht &lt;em&gt;doppelte Leistung&lt;/em&gt; bei gleichem Verbrauch. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr.</summary>
+  </entry>
+  <entry>
+    <title>heise+ | Test: Die besten Router</title>
+    <link rel="alternate" href="https://example.net/tests/router.html"/>
+    <id>urn:2</id>
+    <published>2026-10-18T08:00:00Z</published>
+    <summary>Großer Vergleichstest.</summary>
+    <category term="heise+"/>
+  </entry>
+  <entry>
+    <title>Bundestag beschließt Haushalt 2027</title>
+    <link rel="alternate" href="https://example.org/politik/haushalt-2027-100.html?id=7"/>
+    <id>urn:3</id>
+    <updated>2026-10-18T07:00:00Z</updated>
+    <summary>Auch die Digitalausgaben steigen.</summary>
+  </entry>
+  <entry>
+    <title>Artikel aus der Zukunft</title>
+    <link rel="alternate" href="https://example.net/news/zukunft.html"/>
+    <id>urn:4</id>
+    <published>2099-01-01T00:00:00Z</published>
+    <summary>Falsche Zeitzone beim Verlag.</summary>
+  </entry>
+</feed>

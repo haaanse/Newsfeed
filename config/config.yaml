@@ -1,0 +1,114 @@
+# =====================================================================
+#  Newsfeed – zentrale Konfiguration
+#  Änderungen an Quellen, Themen und Paywall-Regeln werden beim nächsten
+#  Abruf automatisch übernommen (kein Neustart nötig).
+#  Änderungen an fetch.interval_minutes brauchen einen Neustart:
+#     docker compose restart
+# =====================================================================
+
+fetch:
+  interval_minutes: 15        # Abrufintervall aller Feeds
+  timeout_seconds: 20         # Timeout pro Feed
+  max_workers: 8              # parallele Abrufe
+  summary_max_chars: 300      # Anrisstext wird auf diese Länge gekürzt
+  user_agent: "PrivateNewsfeed/0.1 (selbstgehostet; RSS-Reader ohne Tracking)"
+
+retention_days: 14            # ältere Artikel werden automatisch gelöscht
+
+# Bezahlartikel erkennen (Heuristik, reguläre Ausdrücke, Groß/Klein egal).
+# hide: true  -> erkannte Paywall-Artikel werden nie angezeigt.
+paywall:
+  hide: true
+  title_patterns:
+    - '^\s*(SPIEGEL\+|Z\+|F\+|SZ ?Plus|heise ?\+|t3n Pro|WELTplus)(\s|:|$)'
+    - '\((S|Z|F|SZ)\+\)'
+    - '\s(SPIEGEL\+|Z\+|F\+|heise\+)\s*$'
+  url_patterns:
+    - '[?&]reduced=true'      # Süddeutsche Zeitung (SZ Plus)
+    - '/plus/'
+    - '/szplus/'
+    - '/plus\d+/'             # WELT plus
+  category_patterns:
+    - '^(SPIEGEL\+|Z\+|F\+|SZ ?Plus|heise ?\+|t3n Pro|Bezahlinhalt|paid|premium|plus)$'
+
+# ---------------------------------------------------------------------
+#  Themen – Reihenfolge = Reihenfolge der Tabs
+# ---------------------------------------------------------------------
+topics:
+  - { id: top,          name: "Top" }
+  - { id: politik,      name: "Politik" }
+  - { id: wirtschaft,   name: "Wirtschaft" }
+  - { id: tech,         name: "Tech" }
+  - { id: ki,           name: "KI" }
+  - { id: gaming,       name: "Gaming" }
+  - { id: sport,        name: "Sport" }
+  - { id: wissenschaft, name: "Wissenschaft" }
+  - { id: kultur,       name: "Kultur" }
+
+# ---------------------------------------------------------------------
+#  Quellen
+#   id:        eindeutiger Schlüssel
+#   publisher: Verlag – mehrere Feeds desselben Verlags zählen im
+#              Ranking später als EINE Quelle
+#   topic:     Thema (muss oben definiert sein)
+#   weight:    Quellengewichtung (0.5 = schwach … 1.5 = sehr stark)
+#   enabled:   optional, false = Quelle pausieren
+# ---------------------------------------------------------------------
+sources:
+  # --- Top / Allgemein ----------------------------------------------
+  - { id: tagesschau,          publisher: tagesschau,       topic: top,          weight: 1.3, url: "https://www.tagesschau.de/xml/rss2/" }
+  - { id: dlf-nachrichten,     publisher: Deutschlandfunk,  topic: top,          weight: 1.3, url: "https://www.deutschlandfunk.de/nachrichten-100.rss" }
+  - { id: spiegel-top,         publisher: SPIEGEL,          topic: top,          weight: 1.0, url: "https://www.spiegel.de/schlagzeilen/index.rss" }
+  - { id: zeit-top,            publisher: ZEIT,             topic: top,          weight: 1.1, url: "https://newsfeed.zeit.de/index" }
+
+  # --- Politik ---------------------------------------------------------
+  - { id: tagesschau-inland,   publisher: tagesschau,       topic: politik,      weight: 1.3, url: "https://www.tagesschau.de/inland/index~rss2.xml" }
+  - { id: tagesschau-ausland,  publisher: tagesschau,       topic: politik,      weight: 1.3, url: "https://www.tagesschau.de/ausland/index~rss2.xml" }
+  - { id: zeit-politik,        publisher: ZEIT,             topic: politik,      weight: 1.1, url: "https://newsfeed.zeit.de/politik/index" }
+  - { id: spiegel-politik,     publisher: SPIEGEL,          topic: politik,      weight: 1.0, url: "https://www.spiegel.de/politik/index.rss" }
+  - { id: faz-politik,         publisher: FAZ,              topic: politik,      weight: 1.0, url: "https://www.faz.net/rss/aktuell/politik/" }
+  - { id: sz-politik,          publisher: SZ,               topic: politik,      weight: 1.0, url: "https://rss.sueddeutsche.de/rss/Politik" }
+
+  # --- Wirtschaft ------------------------------------------------------
+  - { id: tagesschau-wirtschaft, publisher: tagesschau,     topic: wirtschaft,   weight: 1.2, url: "https://www.tagesschau.de/wirtschaft/index~rss2.xml" }
+  - { id: handelsblatt,        publisher: Handelsblatt,     topic: wirtschaft,   weight: 1.2, url: "https://www.handelsblatt.com/contentexport/feed/schlagzeilen" }
+  - { id: faz-wirtschaft,      publisher: FAZ,              topic: wirtschaft,   weight: 1.1, url: "https://www.faz.net/rss/aktuell/wirtschaft/" }
+  - { id: spiegel-wirtschaft,  publisher: SPIEGEL,          topic: wirtschaft,   weight: 1.0, url: "https://www.spiegel.de/wirtschaft/index.rss" }
+  - { id: zeit-wirtschaft,     publisher: ZEIT,             topic: wirtschaft,   weight: 1.0, url: "https://newsfeed.zeit.de/wirtschaft/index" }
+  - { id: manager-magazin,     publisher: manager magazin,  topic: wirtschaft,   weight: 0.9, url: "https://www.manager-magazin.de/news/index.rss" }
+
+  # --- Tech ------------------------------------------------------------
+  - { id: heise,               publisher: heise,            topic: tech,         weight: 1.3, url: "https://www.heise.de/rss/heise-atom.xml" }
+  - { id: golem,               publisher: golem,            topic: tech,         weight: 1.2, url: "https://rss.golem.de/rss.php?feed=RSS2.0" }
+  - { id: netzpolitik,         publisher: netzpolitik.org,  topic: tech,         weight: 1.0, url: "https://netzpolitik.org/feed/" }
+  - { id: t3n,                 publisher: t3n,              topic: tech,         weight: 0.9, url: "https://t3n.de/rss.xml" }
+  - { id: spiegel-netzwelt,    publisher: SPIEGEL,          topic: tech,         weight: 1.0, url: "https://www.spiegel.de/netzwelt/index.rss" }
+  - { id: zeit-digital,        publisher: ZEIT,             topic: tech,         weight: 1.0, url: "https://newsfeed.zeit.de/digital/index" }
+
+  # --- KI (wird in Schritt 2 zusätzlich per Ollama aus Tech-Feeds befüllt)
+  - { id: the-decoder,         publisher: THE DECODER,      topic: ki,           weight: 1.2, url: "https://the-decoder.de/feed/" }
+
+  # --- Gaming ----------------------------------------------------------
+  - { id: gamestar,            publisher: GameStar,         topic: gaming,       weight: 1.1, url: "https://www.gamestar.de/news/rss/news.rss" }
+  - { id: gamepro,             publisher: GamePro,          topic: gaming,       weight: 1.0, url: "https://www.gamepro.de/news/rss/news.rss" }
+  - { id: pcgames,             publisher: PC Games,         topic: gaming,       weight: 1.0, url: "https://www.pcgames.de/feed.cfm?menu_alias=home/" }
+  - { id: pcgh,                publisher: PC Games Hardware, topic: gaming,      weight: 1.0, url: "https://www.pcgameshardware.de/feed.cfm?menu_alias=home/" }
+
+  # --- Sport -----------------------------------------------------------
+  - { id: sportschau,          publisher: sportschau,       topic: sport,        weight: 1.3, url: "https://www.sportschau.de/index~rss2.xml" }
+  - { id: kicker,              publisher: kicker,           topic: sport,        weight: 1.2, url: "https://newsfeed.kicker.de/news/aktuell" }
+  - { id: spiegel-sport,       publisher: SPIEGEL,          topic: sport,        weight: 0.9, url: "https://www.spiegel.de/sport/index.rss" }
+  - { id: zeit-sport,          publisher: ZEIT,             topic: sport,        weight: 0.9, url: "https://newsfeed.zeit.de/sport/index" }
+
+  # --- Wissenschaft ----------------------------------------------------
+  - { id: spektrum,            publisher: Spektrum,         topic: wissenschaft, weight: 1.3, url: "https://www.spektrum.de/alias/rss/spektrum-de-rss-feed/996406" }
+  - { id: tagesschau-wissen,   publisher: tagesschau,       topic: wissenschaft, weight: 1.2, url: "https://www.tagesschau.de/wissen/index~rss2.xml" }
+  - { id: scinexx,             publisher: scinexx,          topic: wissenschaft, weight: 1.0, url: "https://www.scinexx.de/feed/" }
+  - { id: zeit-wissen,         publisher: ZEIT,             topic: wissenschaft, weight: 1.0, url: "https://newsfeed.zeit.de/wissen/index" }
+  - { id: spiegel-wissenschaft, publisher: SPIEGEL,         topic: wissenschaft, weight: 1.0, url: "https://www.spiegel.de/wissenschaft/index.rss" }
+
+  # --- Kultur ----------------------------------------------------------
+  - { id: zeit-kultur,         publisher: ZEIT,             topic: kultur,       weight: 1.1, url: "https://newsfeed.zeit.de/kultur/index" }
+  - { id: faz-feuilleton,      publisher: FAZ,              topic: kultur,       weight: 1.1, url: "https://www.faz.net/rss/aktuell/feuilleton/" }
+  - { id: sz-kultur,           publisher: SZ,               topic: kultur,       weight: 1.0, url: "https://rss.sueddeutsche.de/rss/Kultur" }
+  - { id: spiegel-kultur,      publisher: SPIEGEL,          topic: kultur,       weight: 1.0, url: "https://www.spiegel.de/kultur/index.rss" }

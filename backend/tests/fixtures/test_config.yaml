@@ -1,0 +1,23 @@
+fetch:
+  interval_minutes: 15
+  timeout_seconds: 5
+  max_workers: 4
+  summary_max_chars: 120
+retention_days: 14
+paywall:
+  hide: true
+  title_patterns:
+    - '^\s*(SPIEGEL\+|Z\+|F\+|SZ ?Plus|heise ?\+|t3n Pro)(\s|:|$)'
+  url_patterns:
+    - '[?&]reduced=true'
+  category_patterns:
+    - '^(heise ?\+|paid)$'
+topics:
+  - { id: top, name: "Top" }
+  - { id: politik, name: "Politik" }
+  - { id: tech, name: "Tech" }
+sources:
+  - { id: politik-feed, publisher: Beispiel, topic: politik, weight: 1.2, url: "https://feeds.test/politik.xml" }
+  - { id: tech-feed, publisher: Technik, topic: tech, weight: 1.0, url: "https://feeds.test/tech.xml" }
+  - { id: kaputt, publisher: Kaputt, topic: top, weight: 1.0, url: "https://feeds.test/kaputt.xml" }
+  - { id: pausiert, publisher: Pause, topic: top, weight: 1.0, url: "https://feeds.test/pause.xml", enabled: false }

@@ -1,0 +1,71 @@
+// Service Worker: App-Shell offline verfügbar, letzte Feed-Antworten (nur Text) als Offline-Fallback.
+// Bilder fremder Server werden nicht angefasst und nicht gecacht.
+const VERSION = "v1";
+const SHELL_CACHE = `shell-${VERSION}`;
+const API_CACHE = `api-${VERSION}`;
+const SHELL = [
+  "/", "/index.html", "/styles.css", "/app.js", "/manifest.webmanifest",
+  "/icons/icon.svg", "/icons/icon-192.png", "/icons/icon-512.png",
+  ...["top", "politik", "wirtschaft", "tech", "ki", "gaming", "sport", "wissenschaft", "kultur", "regional"]
+    .map((t) => `/icons/topics/${t}.svg`),
+];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(caches.open(SHELL_CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => ![SHELL_CACHE, API_CACHE].includes(k)).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  const url = new URL(req.url);
+  if (req.method !== "GET" || url.origin !== self.location.origin) return;
+
+  if (url.pathname === "/api/topics" || url.pathname === "/api/articles") {
+    event.respondWith(networkFirstApi(req, url));
+  } else if (!url.pathname.startsWith("/api/")) {
+    event.respondWith(staleWhileRevalidate(event, req));
+  }
+});
+
+async function networkFirstApi(req, url) {
+  const cache = await caches.open(API_CACHE);
+  // Nur erste Seiten cachen (ohne Cursor), damit der Cache klein bleibt.
+  const cacheable = !url.searchParams.has("before");
+  try {
+    const res = await fetch(req);
+    if (res.ok && cacheable) await cache.put(req, res.clone());
+    return res;
+  } catch (err) {
+    const cached = cacheable && await cache.match(req);
+    if (!cached) throw err;
+    const headers = new Headers(cached.headers);
+    headers.set("X-From-Cache", "1");
+    return new Response(await cached.blob(), { status: 200, headers });
+  }
+}
+
+async function staleWhileRevalidate(event, req) {
+  const cache = await caches.open(SHELL_CACHE);
+  const cached = await cache.match(req, { ignoreSearch: true });
+  const network = fetch(req).then((res) => {
+    if (res.ok) cache.put(req, res.clone());
+    return res;
+  });
+  if (cached) {
+    event.waitUntil(network.catch(() => {}));
+    return cached;
+  }
+  try {
+    return await network;
+  } catch (err) {
+    if (req.mode === "navigate") return cache.match("/index.html");
+    throw err;
+  }
+}
