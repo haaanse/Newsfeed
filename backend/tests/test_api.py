@@ -53,6 +53,7 @@ def test_sources_status(client):
     sources = {s["id"]: s for s in client.get("/api/sources").json()}
     assert sources["kaputt"]["error_count"] == 1
     assert sources["politik-feed"]["articles"] == 5
+    assert sources["pausiert"]["enabled"] is False and sources["politik-feed"]["enabled"] is True
 
 
 def test_privacy_headers_and_frontend(client):

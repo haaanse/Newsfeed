@@ -198,4 +198,4 @@ sources:
   - { id: mydealz-hot,         publisher: mydealz,          topic: bestpreise,   weight: 1.3, url: "https://www.mydealz.de/rss/hot" }
   - { id: dealdoktor,          publisher: DealDoktor,       topic: bestpreise,   weight: 1.0, url: "https://www.dealdoktor.de/feed/" }
   - { id: mein-deal,           publisher: Mein-Deal,        topic: bestpreise,   weight: 1.0, url: "https://www.mein-deal.com/feed/" }
-  - { id: schnaeppchenfuchs,   publisher: Schnäppchenfuchs, topic: bestpreise,   weight: 0.9, url: "https://www.schnaeppchenfuchs.com/feed" }
+  - { id: schnaeppchenfuchs,   publisher: Schnäppchenfuchs, topic: bestpreise,   weight: 0.9, enabled: false, url: "https://www.schnaeppchenfuchs.com/feed" }

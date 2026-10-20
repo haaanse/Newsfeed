@@ -110,10 +110,12 @@ def region_list():
 @router.get("/sources")
 def sources():
     """Status aller Quellen – hilfreich, um kaputte Feed-URLs zu finden."""
+    enabled = {s["id"]: s["enabled"] for s in load_config()["sources"]}
     with db.connect() as conn:
         rows = conn.execute(
             """SELECT s.*, (SELECT COUNT(*) FROM articles a WHERE a.source_id = s.id) AS articles
                FROM sources s ORDER BY s.topic, s.id""").fetchall()
-    return [{k: r[k] for k in ("id", "name", "publisher", "topic", "region", "url", "weight", "last_fetch",
-                               "last_ok", "error_count", "last_error", "last_new", "articles")}
+    return [{**{k: r[k] for k in ("id", "name", "publisher", "topic", "region", "url", "weight", "last_fetch",
+                                  "last_ok", "error_count", "last_error", "last_new", "articles")},
+             "enabled": enabled.get(r["id"], True)}  # Regionalquellen sind nicht in der YAML-Datei
             for r in rows]
