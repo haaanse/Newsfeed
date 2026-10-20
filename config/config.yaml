@@ -126,6 +126,7 @@ topics:
 #   topic:     Thema (muss oben definiert sein)
 #   weight:    Quellengewichtung (0.5 = schwach … 1.5 = sehr stark)
 #   enabled:   optional, false = Quelle pausieren
+#              (pausiert = URL lieferte HTTP 404, Stand 20.10.2026)
 # ---------------------------------------------------------------------
 sources:
   # --- Top / Allgemein ----------------------------------------------
@@ -163,7 +164,7 @@ sources:
 
   # --- Gaming ----------------------------------------------------------
   - { id: gamestar,            publisher: GameStar,         topic: gaming,       weight: 1.1, url: "https://www.gamestar.de/news/rss/news.rss" }
-  - { id: gamepro,             publisher: GamePro,          topic: gaming,       weight: 1.0, url: "https://www.gamepro.de/news/rss/news.rss" }
+  - { id: gamepro,             publisher: GamePro,          topic: gaming,       weight: 1.0, enabled: false, url: "https://www.gamepro.de/news/rss/news.rss" }
   - { id: pcgames,             publisher: PC Games,         topic: gaming,       weight: 1.0, url: "https://www.pcgames.de/feed.cfm?menu_alias=home/" }
   - { id: pcgh,                publisher: PC Games Hardware, topic: gaming,      weight: 1.0, url: "https://www.pcgameshardware.de/feed.cfm?menu_alias=home/" }
 
@@ -177,11 +178,11 @@ sources:
   - { id: spektrum,            publisher: Spektrum,         topic: wissenschaft, weight: 1.3, url: "https://www.spektrum.de/alias/rss/spektrum-de-rss-feed/996406" }
   - { id: tagesschau-wissen,   publisher: tagesschau,       topic: wissenschaft, weight: 1.2, url: "https://www.tagesschau.de/wissen/index~rss2.xml" }
   - { id: scinexx,             publisher: scinexx,          topic: wissenschaft, weight: 1.0, url: "https://www.scinexx.de/feed/" }
-  - { id: zeit-wissen,         publisher: ZEIT,             topic: wissenschaft, weight: 1.0, url: "https://newsfeed.zeit.de/wissen/index" }
+  - { id: zeit-wissen,         publisher: ZEIT,             topic: wissenschaft, weight: 1.0, enabled: false, url: "https://newsfeed.zeit.de/wissen/index" }
   - { id: spiegel-wissenschaft, publisher: SPIEGEL,         topic: wissenschaft, weight: 1.0, url: "https://www.spiegel.de/wissenschaft/index.rss" }
 
   # --- Kultur ----------------------------------------------------------
-  - { id: zeit-kultur,         publisher: ZEIT,             topic: kultur,       weight: 1.1, url: "https://newsfeed.zeit.de/kultur/index" }
+  - { id: zeit-kultur,         publisher: ZEIT,             topic: kultur,       weight: 1.1, enabled: false, url: "https://newsfeed.zeit.de/kultur/index" }
   - { id: faz-feuilleton,      publisher: FAZ,              topic: kultur,       weight: 1.1, url: "https://www.faz.net/rss/aktuell/feuilleton/" }
   - { id: sz-kultur,           publisher: SZ,               topic: kultur,       weight: 1.0, url: "https://rss.sueddeutsche.de/rss/Kultur" }
   - { id: spiegel-kultur,      publisher: SPIEGEL,          topic: kultur,       weight: 1.0, url: "https://www.spiegel.de/kultur/index.rss" }
