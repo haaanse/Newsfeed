@@ -76,7 +76,7 @@ docker compose ps                     # Status "healthy" nach ca. 30 s
 docker compose logs -f                # "Abruf fertig ..." und "Anreicherung fertig ..."
 ```
 
-Im Browser **auf dem Server**: <http://localhost:8080>
+Im Browser **auf dem Server**: <http://localhost:8090>
 
 Steht im Log `Anreicherung übersprungen: Ollama nicht erreichbar`, erreicht der Container Ollama
 nicht. Dann in Windows die Umgebungsvariable `OLLAMA_HOST` auf `0.0.0.0` setzen
@@ -89,7 +89,7 @@ docker compose exec newsfeed python -c "import httpx; print(httpx.get('http://ho
 
 ### 3. Quellen prüfen
 
-<http://localhost:8080/api/sources> zeigt pro Quelle `error_count`, `last_error` und die Anzahl der
+<http://localhost:8090/api/sources> zeigt pro Quelle `error_count`, `last_error` und die Anzahl der
 Artikel. Dauerhaft fehlerhafte Feeds in `config/config.yaml` korrigieren oder mit `enabled: false`
 pausieren – wirkt ab dem nächsten Abruf, ohne Neustart.
 
@@ -128,13 +128,13 @@ Domain und ohne Portfreigabe; die App ist nur in deinem privaten Tailnet erreich
    „HTTPS Certificates“ **Enable HTTPS** klicken.
 3. Auf dem Server:
    ```powershell
-   tailscale serve --bg 8080
+   tailscale serve --bg 8090
    tailscale serve status            # zeigt z. B. https://server.tailxxxx.ts.net
    ```
 4. Adresse auf dem Gerät öffnen und installieren:
    **Chrome/Edge:** Installieren-Symbol in der Adressleiste · **Android:** Menü ⋮ → „App installieren“.
 
-`tailscale serve --bg` bleibt nach Neustarts aktiv (Tailscale läuft als Windows-Dienst). Port 8080 ist
+`tailscale serve --bg` bleibt nach Neustarts aktiv (Tailscale läuft als Windows-Dienst). Port 8090 ist
 nur an `127.0.0.1` gebunden und im LAN ohne Tailscale nicht erreichbar.
 
 ---

@@ -5,8 +5,8 @@ services:
     container_name: newsfeed
     restart: unless-stopped
     ports:
-      # Nur lokal erreichbar – nach außen (HTTPS) geht es über "tailscale serve".
-      - "127.0.0.1:8080:8080"
+      # Nur lokal erreichbar (Port 8090, da 8080 oft schon belegt ist) – nach außen (HTTPS) über "tailscale serve".
+      - "127.0.0.1:8090:8080"
     volumes:
       - newsfeed-data:/data
       - ./config:/app/config:ro
