@@ -1,12 +1,12 @@
 // Service Worker: App-Shell offline verfügbar, letzte Feed-Antworten (nur Text) als Offline-Fallback.
 // Bilder fremder Server werden nicht angefasst und nicht gecacht.
-const VERSION = "v2";
+const VERSION = "v3";
 const SHELL_CACHE = `shell-${VERSION}`;
 const API_CACHE = `api-${VERSION}`;
 const SHELL = [
   "/", "/index.html", "/styles.css", "/app.js", "/manifest.webmanifest",
   "/icons/icon.svg", "/icons/icon-192.png", "/icons/icon-512.png",
-  ...["top", "politik", "wirtschaft", "tech", "ki", "gaming", "sport", "wissenschaft", "kultur", "regional"]
+  ...["top", "politik", "wirtschaft", "tech", "ki", "gaming", "sport", "wissenschaft", "kultur", "bestpreise", "regional"]
     .map((t) => `/icons/topics/${t}.svg`),
 ];
 

@@ -89,6 +89,11 @@ topic_rules:
     - 'künstliche[rnsm]? Intelligenz'
     - '\b(ChatGPT|OpenAI|Anthropic|DeepSeek|Midjourney|Mistral AI|Google Gemini|Microsoft Copilot)\b'
     - '\b(Sprachmodell|Chatbot|LLM|generative[rnsm]? KI|maschinelle[sn]? Lernen|neuronale[sn]? Netz)'
+  bestpreise:
+    - '(Bestpreis|Tiefstpreis|Schnäppchen|Preisfehler|Preisknaller|Preishammer)'
+    - '\b(Deal des Tages|Tagesdeal|Angebot des Tages|Black Friday|Cyber Monday|Prime Day|Singles Day)\b'
+    - '\b(zum Sparpreis|stark reduziert|günstig wie nie)\b'
+    - '\b\d{1,2} ?(%|Prozent) (Rabatt|reduziert|günstiger)'
 
 # ---------------------------------------------------------------------
 #  Regional: Feeds pro Bundesland werden nur abgerufen, wenn in den letzten
@@ -116,6 +121,7 @@ topics:
   - { id: sport,        name: "Sport" }
   - { id: wissenschaft, name: "Wissenschaft" }
   - { id: kultur,       name: "Kultur" }
+  - { id: bestpreise,   name: "Bestpreise" }
   - { id: regional,     name: "Regional" }   # Feeds kommen aus "regional" (s. o.)
 
 # ---------------------------------------------------------------------
@@ -186,3 +192,10 @@ sources:
   - { id: faz-feuilleton,      publisher: FAZ,              topic: kultur,       weight: 1.1, url: "https://www.faz.net/rss/aktuell/feuilleton/" }
   - { id: sz-kultur,           publisher: SZ,               topic: kultur,       weight: 1.0, url: "https://rss.sueddeutsche.de/rss/Kultur" }
   - { id: spiegel-kultur,      publisher: SPIEGEL,          topic: kultur,       weight: 1.0, url: "https://www.spiegel.de/kultur/index.rss" }
+
+  # --- Bestpreise (Deals; zusätzlich über topic_rules aus Tech-/Gaming-Feeds)
+  # mydealz "hot" = nur Deals, die die Community hochgewertet hat
+  - { id: mydealz-hot,         publisher: mydealz,          topic: bestpreise,   weight: 1.3, url: "https://www.mydealz.de/rss/hot" }
+  - { id: dealdoktor,          publisher: DealDoktor,       topic: bestpreise,   weight: 1.0, url: "https://www.dealdoktor.de/feed/" }
+  - { id: mein-deal,           publisher: Mein-Deal,        topic: bestpreise,   weight: 1.0, url: "https://www.mein-deal.com/feed/" }
+  - { id: schnaeppchenfuchs,   publisher: Schnäppchenfuchs, topic: bestpreise,   weight: 0.9, url: "https://www.schnaeppchenfuchs.com/feed" }
