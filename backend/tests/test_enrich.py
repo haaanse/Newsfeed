@@ -100,3 +100,45 @@ def test_feed_api(cfg, db_file, scenario, fake_ollama):
         latest = client.get("/api/feed?topics=sport&sort=latest").json()["items"]
         assert [s["last_seen"] for s in latest] == sorted((s["last_seen"] for s in latest), reverse=True)
         assert client.get("/api/feed?topics=politik&sort=wild").status_code == 422
+
+
+def _store_vec(conn, cfg, title, vec, publisher="P", hours_ago=1.0):
+    import numpy as np
+    from .helpers import add
+    aid = add(conn, cfg, f"src-{publisher}", publisher, "politik", title, hours_ago=hours_ago)
+    v = np.asarray(vec, dtype=np.float32)
+    conn.execute("UPDATE articles SET embedding = ? WHERE id = ?", (enrich.to_blob(v / np.linalg.norm(v)), aid))
+    return aid
+
+
+def test_clustering_does_not_snowball(cfg, db_file):
+    """Ein Artikel, der zwei verschiedenen Meldungen je etwas ähnelt, darf deren Story nicht beitreten."""
+    import time
+    cfg = {**cfg, "ollama": {**cfg["ollama"], "cluster_threshold": 0.8}}
+    now = int(time.time())
+    with db.connect(db_file) as conn:
+        a = _store_vec(conn, cfg, "Meldung A", [1, 0, 0, 0], "P1", 3)
+        b = _store_vec(conn, cfg, "Meldung B", [0, 1, 0, 0], "P2", 2)
+        # A und B künstlich in eine (vielfältige) Story legen
+        cur = conn.execute("INSERT INTO clusters (first_seen, last_seen, size, centroid) VALUES (?, ?, 2, ?)",
+                           (now - 3 * 3600, now - 2 * 3600, enrich.to_blob([0.5, 0.5, 0, 0])))
+        conn.execute("UPDATE articles SET cluster_id = ? WHERE id IN (?, ?)", (cur.lastrowid, a, b))
+        c = _store_vec(conn, cfg, "Allgemeine Meldung", [1, 1, 0, 0], "P3", 1)       # je 0.71 ähnlich
+        d = _store_vec(conn, cfg, "Fast dasselbe wie A", [1, 0.1, 0, 0], "P4", 0.5)  # zu A 0.995, Mittel 0.55
+        e = _store_vec(conn, cfg, "Fast dasselbe wie C", [1, 0.95, 0.05, 0], "P5", 0.2)
+        enrich.cluster_pending(conn, cfg, now)
+        cl = {k: conn.execute("SELECT cluster_id FROM articles WHERE id = ?", (v,)).fetchone()[0]
+              for k, v in dict(a=a, c=c, d=d, e=e).items()}
+    assert cl["c"] != cl["a"]           # normierter Mittelpunkt hätte 1.0 ergeben -> früher beigetreten
+    assert cl["d"] != cl["a"]
+    assert cl["e"] == cl["c"]           # echte Dublette wird weiter zusammengefasst
+
+
+def test_outdated_clusters_are_recomputed(cfg, db_file, scenario, fake_ollama):
+    enrich.run(cfg, db_file, Ollama(cfg, fake_ollama.client()))
+    with db.connect(db_file) as conn:
+        conn.execute("UPDATE meta SET value = 'alt' WHERE key = 'cluster_version'")
+    stats = enrich.run(cfg, db_file, Ollama(cfg, fake_ollama.client()))
+    assert stats["clustered"] == 9      # alles neu gruppiert
+    with db.connect(db_file) as conn:
+        assert conn.execute("SELECT value FROM meta WHERE key = 'cluster_version'").fetchone()[0] == enrich.CLUSTER_VERSION

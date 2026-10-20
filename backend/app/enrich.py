@@ -56,7 +56,28 @@ def embed_pending(conn, cfg: dict, ollama: Ollama, now: int) -> int:
 # ---------------------------------------------------------------------------
 # 2) Clustering: gleiche Story aus verschiedenen Quellen gruppieren
 # ---------------------------------------------------------------------------
+CLUSTER_VERSION = "2"   # erhöhen, wenn sich das Verfahren ändert -> alles wird neu gruppiert
+
+
+def reset_clusters_if_outdated(conn) -> bool:
+    row = conn.execute("SELECT value FROM meta WHERE key = 'cluster_version'").fetchone()
+    if row and row[0] == CLUSTER_VERSION:
+        return False
+    conn.execute("UPDATE articles SET cluster_id = NULL")
+    conn.execute("DELETE FROM clusters")
+    conn.execute("INSERT INTO meta (key, value) VALUES ('cluster_version', ?) "
+                 "ON CONFLICT(key) DO UPDATE SET value = excluded.value", (CLUSTER_VERSION,))
+    log.info("Story-Gruppierung wird neu berechnet (Verfahren v%s)", CLUSTER_VERSION)
+    return True
+
+
 def cluster_pending(conn, cfg: dict, now: int) -> dict:
+    """Ordnet neue Artikel bestehenden Storys zu oder legt neue an.
+
+    Ein Artikel kommt nur in eine Story, wenn er ihren Artikeln IM DURCHSCHNITT ähnlich
+    genug ist (Average Linkage). Der Vergleich mit einem normierten Mittelpunkt würde
+    bei wachsenden Storys immer allgemeiner und ließe sie zu Riesen-Storys anwachsen.
+    """
     window = int(cfg["ollama"]["cluster_window_hours"]) * 3600
     threshold = float(cfg["ollama"]["cluster_threshold"])
     rows = conn.execute(
@@ -73,11 +94,11 @@ def cluster_pending(conn, cfg: dict, now: int) -> dict:
         (oldest - window,)) if len(from_blob(c["centroid"])) == dim]
 
     ids = [c["id"] for c in existing]
-    sums = [from_blob(c["centroid"]) * c["size"] for c in existing]   # Summe der Vektoren
     sizes = [c["size"] for c in existing]
     first = [c["first_seen"] for c in existing]
     last = [c["last_seen"] for c in existing]
-    centroids = np.array([s / np.linalg.norm(s) for s in sums], dtype=np.float32).reshape(-1, dim)
+    # Mittelwert der (normierten) Artikelvektoren: means @ v = mittlere Ähnlichkeit zu allen Artikeln
+    means = np.array([from_blob(c["centroid"]) for c in existing], dtype=np.float32).reshape(-1, dim)
     dirty: set[int] = set()
     new_clusters = 0
 
@@ -86,7 +107,7 @@ def cluster_pending(conn, cfg: dict, now: int) -> dict:
         ts = r["published_at"]
         best = -1
         if len(ids):
-            sims = centroids @ v
+            sims = means @ v
             # nur Storys, die zeitlich passen (Fenster um den Artikel)
             in_window = np.array([ts - window <= f <= ts + window for f in first])
             sims = np.where(in_window, sims, -1.0)
@@ -94,29 +115,27 @@ def cluster_pending(conn, cfg: dict, now: int) -> dict:
             if sims[idx] >= threshold:
                 best = idx
         if best >= 0:
-            sums[best] = sums[best] + v
+            means[best] = (means[best] * sizes[best] + v) / (sizes[best] + 1)
             sizes[best] += 1
             first[best] = min(first[best], ts)
             last[best] = max(last[best], ts)
-            centroids[best] = sums[best] / np.linalg.norm(sums[best])
             dirty.add(best)
         else:
             cur = conn.execute(
                 "INSERT INTO clusters (first_seen, last_seen, size, centroid) VALUES (?, ?, 1, ?)",
                 (ts, ts, to_blob(v)))
             ids.append(cur.lastrowid)
-            sums.append(v.copy())
             sizes.append(1)
             first.append(ts)
             last.append(ts)
-            centroids = np.vstack([centroids, v[None, :]])
+            means = np.vstack([means, v[None, :]])
             new_clusters += 1
             best = len(ids) - 1
         conn.execute("UPDATE articles SET cluster_id = ? WHERE id = ?", (ids[best], r["id"]))
 
     for i in dirty:
         conn.execute("UPDATE clusters SET centroid = ?, size = ?, first_seen = ?, last_seen = ? WHERE id = ?",
-                     (to_blob(centroids[i]), sizes[i], first[i], last[i], ids[i]))
+                     (to_blob(means[i]), sizes[i], first[i], last[i], ids[i]))
     return {"clustered": len(rows), "new_clusters": new_clusters}
 
 
@@ -265,6 +284,7 @@ def run(cfg: dict | None = None, db_file: Path | None = None, ollama: Ollama | N
         except OllamaUnavailable as e:
             log.warning("Embeddings unvollständig: %s", e)
             stats["embed_error"] = str(e)
+        reset_clusters_if_outdated(conn)
         stats.update(cluster_pending(conn, cfg, now))
         stats.update(classify_pending(conn, cfg, ollama if llm_ok else None, now))
         if llm_ok and cfg["ollama"]["summaries"]["enabled"]:

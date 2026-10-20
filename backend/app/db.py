@@ -57,6 +57,11 @@ CREATE TABLE IF NOT EXISTS clusters (
 );
 CREATE INDEX IF NOT EXISTS idx_clusters_last_seen ON clusters(last_seen);
 
+CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT
+);
+
 -- Nur das Bundesland und der Zeitpunkt – keine Geräte- oder Nutzerdaten.
 CREATE TABLE IF NOT EXISTS region_requests (
     region         TEXT PRIMARY KEY,
