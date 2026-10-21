@@ -73,3 +73,20 @@ def test_region_request_stores_only_land(cfg, db_file):
         regions.touch(conn, "HE")
         cols = [r["name"] for r in conn.execute("PRAGMA table_info(region_requests)")]
     assert cols == ["region", "last_requested"]
+
+
+def test_only_local_keeps_other_topics_in_mixed_feed(cfg, db_file, monkeypatch):
+    """Regression: "Nur Lokalmeldungen" hat "Mein Feed" komplett geleert."""
+    monkeypatch.setattr(api, "_load_region_async", lambda land: None)
+    with db.connect(db_file) as conn:
+        add(conn, cfg, "politik-feed", "Beispiel", "politik", "Bundestag beschließt Haushalt")
+        add(conn, cfg, "regional-by", "tagesschau Bayern", "regional",
+            "Unfall bei Bad Aibling: Zwei Verletzte", region="BY")
+        add(conn, cfg, "regional-by", "tagesschau Bayern", "regional",
+            "Nürnberg plant neue U-Bahn-Linie", region="BY")
+        conn.execute("INSERT OR IGNORE INTO sources (id, name, publisher, url, region, last_fetch) "
+                     "VALUES ('regional-by', 'x', 'x', 'x', 'BY', 1)")
+    with TestClient(app) as client:
+        items = client.get("/api/feed?topics=politik,regional&land=BY&kreis=09187&only_local=true").json()["items"]
+    titles = {s["title"] for s in items}
+    assert titles == {"Bundestag beschließt Haushalt", "Unfall bei Bad Aibling: Zwei Verletzte"}

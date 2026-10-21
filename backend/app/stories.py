@@ -83,7 +83,9 @@ def build(conn, cfg: dict, q: Query) -> dict:
         lead = max(by_publisher.values(), key=lambda a: (pub_weight[a["publisher"]], -a["published_at"]))
         first_seen, last_seen = arts[0]["published_at"], arts[-1]["published_at"]
         local = bool(matcher and any(matcher.search(f"{a['title']} {a['summary'] or ''}") for a in arts))
-        if q.only_local and matcher and not local:
+        # "Nur Lokalmeldungen" betrifft nur Regionalmeldungen – in "Mein Feed" bleiben die übrigen Themen
+        regional_only = all(a["region"] for a in arts)
+        if q.only_local and matcher and regional_only and not local:
             continue
         values = dict(
             sources=len(by_publisher),
